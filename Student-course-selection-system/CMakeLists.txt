@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(Student-course-selection-system main.cpp
-    course.h)
+    course.h
+    system.h system.cpp)
 
 include(GNUInstallDirs)
 install(TARGETS Student-course-selection-system
