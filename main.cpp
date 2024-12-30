@@ -1,9 +1,11 @@
-#include <iostream>
-#include "course.h"
-using namespace std;
+#include "menu.h"
+#include "system.h"
 
-int main()
-{
-    cout << "Hello World!" << endl;
+int main() {
+    System sys;
+
+    // Start user interface
+    sys.userInterface();
+
     return 0;
 }
