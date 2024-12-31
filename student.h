@@ -20,9 +20,9 @@ public:
     const std::vector<std::shared_ptr<Course>>& getCourses() const;
 
 private:
-    std::string name;
-    int studentID;
-    std::vector<std::shared_ptr<Course>> enrolledCourses;
+    std::string _name;
+    int _studentID;
+    std::vector<std::shared_ptr<Course>> _enrolledCourses;
 
 
 };

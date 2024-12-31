@@ -10,8 +10,6 @@
 class Course;
 
 class Teacher {
-private:
-    std::string name;
 
 public:
     Teacher(const std::string& name);
@@ -20,5 +18,7 @@ public:
 
     void importScore(std::shared_ptr<Course> course, int studentID, int score);
     void viewCourses(const std::vector<std::shared_ptr<Course>>& courses) const;
+private:
+    std::string _name;
 };
 
