@@ -1,10 +1,10 @@
 #include "teacher.h"
 #include "course.h"
 
-Teacher::Teacher(const std::string& name) : name(name) {}
+Teacher::Teacher(const std::string& name) : _name(name) {}
 
 std::string Teacher::getName() const {
-    return name;
+    return _name;
 }
 
 void Teacher::importScore(std::shared_ptr<Course> course, int studentID, int score) {
@@ -12,7 +12,7 @@ void Teacher::importScore(std::shared_ptr<Course> course, int studentID, int sco
 }
 
 void Teacher::viewCourses(const std::vector<std::shared_ptr<Course>>& courses) const {
-    std::cout << "Courses handled by " << name << ":\n";
+    std::cout << "Courses handled by " << _name << ":\n";
     for (const auto& course : courses) {
         std::cout << course->getCourseName() << " - " << course->getDescription() << "\n";
     }

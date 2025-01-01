@@ -19,6 +19,16 @@ public:
     void saveData(const std::string& dbname);
     void loadData(const std::string& dbname);
 
+    void addStudentUI();
+    void addTeacherUI();
+    void addCourseUI();
+    void studentSelectCourseUI();
+    void teacherImportScoreUI();
+    void studentViewScoresUI();
+    void studentViewCoursesUI();
+    void teacherViewCoursesUI();
+    void saveDataUI();
+    void loadDataUI();
 
 private:
     std::vector<std::shared_ptr<Student>> _students;

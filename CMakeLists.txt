@@ -6,12 +6,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(Student-course-selection-system main.cpp
-    student.h
-    teacher.h
-    course.h
+    student.h student.cpp
+    teacher.h teacher.cpp
+    course.h course.cpp
     README.md
-    teacher.cpp
-    student.cpp
     system.h system.cpp
 )
 
