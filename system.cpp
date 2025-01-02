@@ -241,10 +241,10 @@ void System::userInterface() {
             teacherViewCoursesUI();
             break;
         case 9:
-            saveDataUI();
+            //saveDataUI();
             break;
         case 10:
-            loadDataUI();
+            //loadDataUI();
             break;
         case 11:
             return;

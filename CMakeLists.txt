@@ -9,7 +9,6 @@ add_executable(Student-course-selection-system main.cpp
     student.h student.cpp
     teacher.h teacher.cpp
     course.h course.cpp
-    README.md
     system.h system.cpp
 )
 
