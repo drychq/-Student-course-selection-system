@@ -1,5 +1,6 @@
+//陈瀚钦 2025-1-3
 #include "system.h"
-#include "course.h"
+#include <sqlite3.h>
 
 void System::addStudent(const std::string& name, int id) {
     _students.push_back(std::make_shared<Student>(name, id));
@@ -40,6 +41,7 @@ std::shared_ptr<Course> System::findCourse(int id) {
     return nullptr;
 }
 
+//辅助函数
 void clearInput() {
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -191,6 +193,20 @@ void System::teacherViewCoursesUI() {
     }
 }
 
+void System::saveDataUI() {
+    std::string dbname;
+    std::cout << "Enter database name to save data: ";
+    std::cin >> dbname;
+    saveData(dbname);
+}
+
+void System::loadDataUI() {
+    std::string dbname;
+    std::cout << "Enter database name to load data: ";
+    std::cin >> dbname;
+    loadData(dbname);
+}
+
 void System::userInterface() {
     while (true) {
         std::cout << "\n--- Course Selection System ---\n";
@@ -241,10 +257,10 @@ void System::userInterface() {
             teacherViewCoursesUI();
             break;
         case 9:
-            //saveDataUI();
+            saveDataUI();
             break;
         case 10:
-            //loadDataUI();
+            loadDataUI();
             break;
         case 11:
             return;
@@ -252,4 +268,189 @@ void System::userInterface() {
             std::cout << "Invalid choice. Try again.\n";
         }
     }
+}
+
+// 用于执行sql的辅助函数
+bool executeSQL(sqlite3* db, const std::string& sql) {
+    char* errMsg = nullptr;
+    int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "SQL error: " << errMsg << "\n";
+        sqlite3_free(errMsg);
+        return false;
+    }
+    return true;
+}
+
+// 用于检查数据库状态的辅助函数
+bool prepareSQL(sqlite3* db, const std::string& sql, sqlite3_stmt** stmt) {
+    int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+    return true;
+}
+
+void System::saveData(const std::string& dbname) {
+    sqlite3* db;
+    int rc = sqlite3_open(dbname.c_str(), &db);
+    if (rc) {
+        std::cerr << "Can't open database: " << sqlite3_errmsg(db) << "\n";
+        return;
+    }
+
+    const char* createTablesSQL =
+        "CREATE TABLE IF NOT EXISTS Students (ID INT PRIMARY KEY NOT NULL, Name TEXT NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS Teachers (Name TEXT PRIMARY KEY NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS Courses (ID INT PRIMARY KEY NOT NULL, Name TEXT NOT NULL, Description TEXT NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS Enrollments (StudentID INT NOT NULL, CourseID INT NOT NULL, Score INT, PRIMARY KEY (StudentID, CourseID));";
+
+    if (!executeSQL(db, createTablesSQL)) {
+        sqlite3_close(db);
+        return;
+    }
+
+    sqlite3_exec(db, "BEGIN TRANSACTION;", 0, 0, 0);
+
+    sqlite3_stmt* stmt;
+
+    const char* insertStudentSQL = "INSERT OR REPLACE INTO Students (ID, Name) VALUES (?, ?);";
+    if (!prepareSQL(db, insertStudentSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    for (const auto& student : _students) {
+        sqlite3_bind_int(stmt, 1, student->getStudentID());
+        sqlite3_bind_text(stmt, 2, student->getName().c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt);
+
+        const auto& courses = student->getCourses();
+        const char* insertEnrollmentSQL = "INSERT OR REPLACE INTO Enrollments (StudentID, CourseID, Score) VALUES (?, ?, ?);";
+        sqlite3_stmt* enrollStmt;
+        if (!prepareSQL(db, insertEnrollmentSQL, &enrollStmt)) {
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            return;
+        }
+
+        for (const auto& course : courses) {
+            int score = course->getScore(student->getStudentID());
+            sqlite3_bind_int(enrollStmt, 1, student->getStudentID());
+            sqlite3_bind_int(enrollStmt, 2, course->getCourseID());
+            if (score == -1) {
+                sqlite3_bind_null(enrollStmt, 3);
+            } else {
+                sqlite3_bind_int(enrollStmt, 3, score);
+            }
+            sqlite3_step(enrollStmt);
+            sqlite3_reset(enrollStmt);
+        }
+        sqlite3_finalize(enrollStmt);
+    }
+    sqlite3_finalize(stmt);
+
+    const char* insertTeacherSQL = "INSERT OR REPLACE INTO Teachers (Name) VALUES (?);";
+    if (!prepareSQL(db, insertTeacherSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    for (const auto& teacher : _teachers) {
+        sqlite3_bind_text(stmt, 1, teacher->getName().c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt);
+    }
+    sqlite3_finalize(stmt);
+
+    const char* insertCourseSQL = "INSERT OR REPLACE INTO Courses (ID, Name, Description) VALUES (?, ?, ?);";
+    if (!prepareSQL(db, insertCourseSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    for (const auto& course : _courses) {
+        sqlite3_bind_int(stmt, 1, course->getCourseID());
+        sqlite3_bind_text(stmt, 2, course->getCourseName().c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 3, course->getDescription().c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_step(stmt);
+        sqlite3_reset(stmt);
+    }
+    sqlite3_finalize(stmt);
+
+    sqlite3_exec(db, "COMMIT;", 0, 0, 0);
+    sqlite3_close(db);
+}
+
+void System::loadData(const std::string& dbname) {
+    sqlite3* db;
+    int rc = sqlite3_open(dbname.c_str(), &db);
+    if (rc) {
+        std::cerr << "Can't open database: " << sqlite3_errmsg(db) << "\n";
+        return;
+    }
+
+    _students.clear();
+    _teachers.clear();
+    _courses.clear();
+
+    sqlite3_stmt* stmt;
+
+    const char* selectStudentsSQL = "SELECT ID, Name FROM Students;";
+    if (!prepareSQL(db, selectStudentsSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        _students.push_back(std::make_shared<Student>(name, id));
+    }
+    sqlite3_finalize(stmt);
+
+    const char* selectTeachersSQL = "SELECT Name FROM Teachers;";
+    if (!prepareSQL(db, selectTeachersSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        _teachers.push_back(std::make_shared<Teacher>(name));
+    }
+    sqlite3_finalize(stmt);
+
+    const char* selectCoursesSQL = "SELECT ID, Name, Description FROM Courses;";
+    if (!prepareSQL(db, selectCoursesSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        _courses.push_back(std::make_shared<Course>(name, id, desc));
+    }
+    sqlite3_finalize(stmt);
+
+    const char* selectEnrollmentsSQL = "SELECT StudentID, CourseID, Score FROM Enrollments;";
+    if (!prepareSQL(db, selectEnrollmentsSQL, &stmt)) {
+        sqlite3_close(db);
+        return;
+    }
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int studentID = sqlite3_column_int(stmt, 0);
+        int courseID = sqlite3_column_int(stmt, 1);
+        int score = sqlite3_column_type(stmt, 2) == SQLITE_NULL ? -1 : sqlite3_column_int(stmt, 2);
+
+        auto student = findStudent(studentID);
+        auto course = findCourse(courseID);
+        if (student && course) {
+            student->selectCourse(course);
+            if (score != -1) {
+                course->importScore(studentID, score);
+            }
+        }
+    }
+    sqlite3_finalize(stmt);
+
+    sqlite3_close(db);
 }

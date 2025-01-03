@@ -1,7 +1,9 @@
+//陈瀚钦 2025-1-3
 #pragma once
 
 #include "student.h"
 #include "teacher.h"
+#include "course.h"
 #include <memory>
 
 class System
