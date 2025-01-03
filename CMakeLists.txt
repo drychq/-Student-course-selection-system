@@ -5,13 +5,13 @@ project(Student-course-selection-system LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(Student-course-selection-system main.cpp
-    student.h student.cpp
-    teacher.h teacher.cpp
-    course.h course.cpp
-    system.h system.cpp
+add_executable(Student-course-selection-system
+    src/main.cpp
+    src/student.h src/student.cpp
+    src/teacher.h src/teacher.cpp
+    src/course.h src/course.cpp
+    src/system.h src/system.cpp
 )
-
 
 find_package(SQLite3 REQUIRED)
 target_link_libraries(Student-course-selection-system PRIVATE SQLite::SQLite3)
