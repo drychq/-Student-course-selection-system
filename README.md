@@ -9,7 +9,7 @@
 ## 部署步骤
 1. 克隆项目：
    
-   git clone https://github.com/your-repo/StudentCourseSystem.git 
+   git clone https://github.com/drychq/Student-course-selection-system.git
 
    cd Student-course-selection-system
 
